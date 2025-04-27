@@ -1,8 +1,10 @@
 import { use, useEffect, useState } from 'react'
+import { useDebounce } from 'react-use'
 import './App.css'
 import Search from './components/search'
 import Spinner from './components/spinner'
 import MovieCard from './components/MovieCard'
+import { getTrendingMovies, updateSearchCount } from './appwrite'
 
 const API_BASE_URL = 'https://api.themoviedb.org/3'
 
@@ -18,11 +20,15 @@ const API_OPTIONS = {
 
 const App = () => {
   const [searchTerm, setSearchTerm] = useState('')
-
-  const [errorMessage, setErrorMessage] = useState('')
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('')
 
   const [movieList, setMovieList] = useState([])
+  const [errorMessage, setErrorMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+
+  const [trendingMovies, setTrendingMovies] = useState([])
+
+  useDebounce(() => setDebouncedSearchTerm(searchTerm), 1000, [searchTerm])
 
   const fetchMovies = async (query = '') => {
     setIsLoading(true)
@@ -46,6 +52,9 @@ const App = () => {
         return
       }
       setMovieList(data.results)
+      if (query && data.results.length > 0) {
+        await updateSearchCount(query, data.results[0])
+      }
     } catch (error) {
       console.error(`Error fetching movies: ${error}`)
       setErrorMessage('Failed to fetch movies. Please try again later.')
@@ -54,8 +63,21 @@ const App = () => {
     }
   }
   useEffect(() => {
-    fetchMovies(searchTerm)
-  }, [searchTerm])
+    fetchMovies(debouncedSearchTerm)
+  }, [debouncedSearchTerm])
+
+  const loadTrendingMovies = async () => {
+    try {
+      const movies = await getTrendingMovies()
+
+      setTrendingMovies(movies)
+    } catch (error) {
+      console.error('Error fetching trending movies:', error)
+    }
+  }
+  useEffect(() => {
+    loadTrendingMovies()
+  }, [])
 
   return (
     <main>
@@ -69,7 +91,21 @@ const App = () => {
           </h1>
           <Search searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
         </header>
-        <section className='all-movies mt-[40px]'>
+
+        {trendingMovies.length > 0 && (
+          <section className='trending'>
+            <h2>Trending Movies</h2>
+            <ul>
+              {trendingMovies.map((movie, index) => (
+                <li key={movie.$id}>
+                  <p>{index + 1}</p>
+                  <img src={movie.poster_url} alt={movie.title} />
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+        <section className='all-movies '>
           <h2>All Movies</h2>
           {isLoading ? (
             <Spinner />
