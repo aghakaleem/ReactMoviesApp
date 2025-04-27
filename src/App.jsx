@@ -2,7 +2,7 @@ import { use, useEffect, useState } from 'react'
 import { useDebounce } from 'react-use'
 import './App.css'
 import Search from './components/search'
-import Spinner from './components/spinner'
+import Spinner from './components/Spinner'
 import MovieCard from './components/MovieCard'
 import { getTrendingMovies, updateSearchCount } from './appwrite'
 
